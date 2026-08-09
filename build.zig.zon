@@ -1,0 +1,16 @@
+.{
+    .name = .gfdi,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.16.0",
+    .fingerprint = 0xfe10d06bbaa37189,
+    .paths = .{
+        "src",
+        "build.zig",
+        "build.zig.zon",
+    },
+    .dependencies = .{
+        .zfit = .{
+            .path = "../zfit",
+        },
+    },
+}

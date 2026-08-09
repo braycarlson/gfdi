@@ -1,0 +1,32 @@
+name: ci
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    ci:
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  path: gfdi
+            - uses: actions/checkout@v6
+              with:
+                  repository: braycarlson/zfit
+                  path: zfit
+            - uses: mlugg/setup-zig@v2
+              with:
+                  version: 0.16.0
+            - run: zig build ci --summary all
+              working-directory: gfdi
+            - run: zig build check -Dtarget=x86_64-windows-gnu --summary all
+              working-directory: gfdi
+            - run: zig build check -Dtarget=x86_64-linux-gnu --summary all
+              working-directory: gfdi
