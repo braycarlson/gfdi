@@ -26,11 +26,11 @@ test:
 
 # Run the colocated unit tests and the tidy law, optionally filtered: just unit tidy
 unit filter="":
-    zig build test:unit --summary all -- {{filter}}
+    zig build test:unit --summary all {{ if filter == "" { "" } else { "-Dtest-filter=" + filter } }}
 
 # Run the tidy check on its own
 tidy:
-    zig build test:unit -- tidy
+    zig build test:unit -Dtest-filter=tidy
 
 # Check that every source file is formatted
 fmt:

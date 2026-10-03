@@ -72,7 +72,7 @@ pub const LinuxClock = struct {
         const month_day = year_day.calculateMonthDay();
         const day_seconds = epoch_seconds.getDaySeconds();
 
-        return std.fmt.bufPrint(buffer, "{d:0>4}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}", .{
+        return std.mem.print(buffer, "{d:0>4}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}", .{
             year_day.year,
             month_day.month.numeric(),
             @as(u16, month_day.day_index) + 1,

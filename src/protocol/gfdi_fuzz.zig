@@ -112,7 +112,7 @@ fn frame_round_trip_one(random: std.Random) !void {
     random.bytes(payload[0..payload_len]);
 
     const raw_type = random.int(u16);
-    const message_type: gfdi.MessageType = @enumFromInt(raw_type);
+    const message_type: gfdi.MessageType = @fromBackingInt(raw_type);
 
     var frame: [gfdi.message_len_max]u8 = undefined;
     const frame_len = gfdi.build_frame(&frame, message_type, payload[0..payload_len]);

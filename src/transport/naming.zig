@@ -49,7 +49,7 @@ pub fn type_dir(file_type: ?u8) []const u8 {
 
 pub fn dir_path(buffer: []u8, file_type: ?u8) ?[]const u8 {
     assert(buffer.len > 0);
-    return std.fmt.bufPrint(buffer, "{s}/{s}", .{ output_root, type_dir(file_type) }) catch null;
+    return std.mem.print(buffer, "{s}/{s}", .{ output_root, type_dir(file_type) }) catch null;
 }
 
 pub fn activity_path(buffer: []u8, dir: []const u8, stamp: []const u8, suffix: u32) ?[]const u8 {
@@ -59,23 +59,23 @@ pub fn activity_path(buffer: []u8, dir: []const u8, stamp: []const u8, suffix: u
     assert(suffix >= 1);
 
     if (suffix == 1) {
-        return std.fmt.bufPrint(buffer, "{s}/{s}.fit", .{ dir, stamp }) catch null;
+        return std.mem.print(buffer, "{s}/{s}.fit", .{ dir, stamp }) catch null;
     }
 
-    return std.fmt.bufPrint(buffer, "{s}/{s}_{d}.fit", .{ dir, stamp, suffix }) catch null;
+    return std.mem.print(buffer, "{s}/{s}_{d}.fit", .{ dir, stamp, suffix }) catch null;
 }
 
 pub fn index_path(buffer: []u8, dir: []const u8, index: u16) ?[]const u8 {
     assert(buffer.len > 0);
     assert(dir.len > 0);
 
-    return std.fmt.bufPrint(buffer, "{s}/idx{d}.fit", .{ dir, index }) catch null;
+    return std.mem.print(buffer, "{s}/idx{d}.fit", .{ dir, index }) catch null;
 }
 
 pub fn marker_path(buffer: []u8, index: u16) []const u8 {
     assert(buffer.len > 0);
 
-    return std.fmt.bufPrint(buffer, "{s}/{d}", .{ state_dir, index }) catch |err| switch (err) {
+    return std.mem.print(buffer, "{s}/{d}", .{ state_dir, index }) catch |err| switch (err) {
         error.NoSpaceLeft => @panic("marker_path buffer too small"),
     };
 }

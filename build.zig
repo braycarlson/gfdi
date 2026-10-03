@@ -48,6 +48,12 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const filters = b.option(
+        []const []const u8,
+        "test-filter",
+        "Skip tests that do not match any filter",
+    ) orelse &.{};
+
     const steps = Steps{
         .check = b.step("check", "Compile every artifact without running it"),
         .ci = b.step("ci", "Run formatting, compilation, unit tests, and fuzzer smoke"),
@@ -69,8 +75,8 @@ pub fn build(b: *std.Build) void {
 
     add_format(b, &steps);
     add_cli(b, &steps, module, target, optimize);
-    add_unit_tests(b, &steps, target, optimize);
-    add_linux_tests(b, &steps, optimize);
+    add_unit_tests(b, &steps, target, optimize, filters);
+    add_linux_tests(b, &steps, optimize, filters);
     add_fuzz(b, &steps, target, optimize);
 
     steps.ci.dependOn(steps.test_fmt);
@@ -83,7 +89,7 @@ pub fn build(b: *std.Build) void {
 
 fn add_format(b: *std.Build, steps: *const Steps) void {
     const fmt = b.addFmt(.{
-        .paths = &format_paths,
+        .paths = b.pathList(&format_paths),
         .check = true,
     });
 
@@ -96,7 +102,7 @@ fn add_cli(
     steps: *const Steps,
     module: *std.Build.Module,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
 ) void {
     const hosted = is_hosted(target.result.os.tag);
 
@@ -128,8 +134,7 @@ fn add_cli(
     const run = b.addRunArtifact(exe);
 
     run.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| run.addArgs(args);
+    run.addPassthruArgs();
 
     steps.run.dependOn(&run.step);
 }
@@ -138,7 +143,8 @@ fn add_unit_tests(
     b: *std.Build,
     steps: *const Steps,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
+    filters: []const []const u8,
 ) void {
     const unit = b.addTest(.{
         .root_module = b.createModule(.{
@@ -147,7 +153,7 @@ fn add_unit_tests(
             .optimize = optimize,
             .imports = &.{.{ .name = "zfit", .module = zfit_module(b, target, optimize) }},
         }),
-        .filters = b.args orelse &.{},
+        .filters = filters,
     });
 
     const run = b.addRunArtifact(unit);
@@ -162,7 +168,8 @@ fn add_unit_tests(
 fn add_linux_tests(
     b: *std.Build,
     steps: *const Steps,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
+    filters: []const []const u8,
 ) void {
     if (b.graph.host.result.os.tag != .linux) {
         return;
@@ -178,7 +185,7 @@ fn add_linux_tests(
                 .module = zfit_module(b, b.graph.host, optimize),
             }},
         }),
-        .filters = b.args orelse &.{},
+        .filters = filters,
     });
 
     const run = b.addRunArtifact(suite);
@@ -194,7 +201,7 @@ fn add_fuzz(
     b: *std.Build,
     steps: *const Steps,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
 ) void {
     const exe = b.addExecutable(.{
         .name = "fuzz",
@@ -208,7 +215,7 @@ fn add_fuzz(
 
     const run = b.addRunArtifact(exe);
 
-    if (b.args) |args| run.addArgs(args);
+    run.addPassthruArgs();
 
     const smoke = b.addRunArtifact(exe);
 
@@ -223,7 +230,7 @@ fn add_fuzz(
 fn cross_module(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
 ) *std.Build.Module {
     return b.createModule(.{
         .root_source_file = b.path(root_path),
@@ -236,7 +243,7 @@ fn cross_module(
 fn zfit_module(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
 ) *std.Build.Module {
     const dependency = b.dependency("zfit", .{
         .target = target,

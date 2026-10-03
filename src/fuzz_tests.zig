@@ -50,7 +50,7 @@ comptime {
     assert(seed_smoke > 0);
     assert(canary_odds > 1);
     assert(arguments_min < arguments_max);
-    assert(@typeInfo(Fuzzer).@"enum".fields.len > 2);
+    assert(@typeInfo(Fuzzer).@"enum".field_names.len > 2);
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -91,10 +91,10 @@ pub fn main(init: std.process.Init) !void {
         return Error.BadUsage;
     }
 
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    defer assert(debug_allocator.deinit() == .ok);
+    var safe_allocator: std.heap.SafeAllocator = .init(std.heap.page_allocator, .{});
+    defer assert(safe_allocator.deinit() == 0);
 
-    const gpa = debug_allocator.allocator();
+    const gpa = safe_allocator.allocator();
 
     std.debug.print("fuzzer={s} seed={d} events={d}\n", .{
         @tagName(fuzzer),
@@ -118,8 +118,8 @@ pub fn run(gpa: Allocator, fuzzer: Fuzzer, args: fuzz.FuzzArgs) !void {
 pub fn run_smoke(gpa: Allocator, args: fuzz.FuzzArgs) !void {
     assert(args.events_max >= 1);
 
-    inline for (@typeInfo(Fuzzer).@"enum".fields) |field| {
-        const fuzzer = @field(Fuzzers, field.name);
+    inline for (@typeInfo(Fuzzer).@"enum".field_names) |name| {
+        const fuzzer = @field(Fuzzers, name);
 
         if (@TypeOf(fuzzer) != void) try fuzzer.main(gpa, args);
     }
@@ -145,8 +145,8 @@ fn run_canary(args: fuzz.FuzzArgs) !void {
 fn build_usage() []const u8 {
     var text: []const u8 = "usage: fuzz <fuzzer> [seed] [events]\n\nfuzzers:";
 
-    for (@typeInfo(Fuzzer).@"enum".fields) |field| {
-        text = text ++ " " ++ field.name;
+    for (@typeInfo(Fuzzer).@"enum".field_names) |name| {
+        text = text ++ " " ++ name;
     }
 
     return text ++ "\n";
@@ -181,7 +181,7 @@ test "canary passes for a short run" {
 }
 
 test "usage lists every fuzzer" {
-    inline for (@typeInfo(Fuzzer).@"enum".fields) |field| {
-        try testing.expect(std.mem.indexOf(u8, usage, field.name) != null);
+    for (@typeInfo(Fuzzer).@"enum".field_names) |name| {
+        try testing.expect(std.mem.find(u8, usage, name) != null);
     }
 }

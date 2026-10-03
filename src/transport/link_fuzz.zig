@@ -28,7 +28,7 @@ comptime {
     assert(frames_per_event_max > 0);
     assert(transfer_bytes_max > multi_link.mtu_write_max);
     assert(control_bytes_min <= multi_link.mtu_write_max);
-    assert(@typeInfo(Shape).@"enum".fields.len == 6);
+    assert(@typeInfo(Shape).@"enum".field_names.len == 6);
 }
 
 pub fn main(gpa: Allocator, args: fuzz.FuzzArgs) !void {

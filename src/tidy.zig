@@ -297,7 +297,7 @@ fn opens_scope(line: []const u8) bool {
         return false;
     }
 
-    return std.mem.indexOfScalar(u8, statement_openers, trimmed[trimmed.len - 1]) != null;
+    return std.mem.findScalar(u8, statement_openers, trimmed[trimmed.len - 1]) != null;
 }
 
 fn closes_scope(line: []const u8) bool {
@@ -307,7 +307,7 @@ fn closes_scope(line: []const u8) bool {
         return false;
     }
 
-    return std.mem.indexOfScalar(u8, statement_closers, trimmed[0]) != null;
+    return std.mem.findScalar(u8, statement_closers, trimmed[0]) != null;
 }
 
 fn opens_statement(line: []const u8) bool {
@@ -317,7 +317,7 @@ fn opens_statement(line: []const u8) bool {
     if (indent_of(line).len == 0) return false;
     if (!opens_scope(line)) return false;
     if (closes_scope(line)) return false;
-    if (std.mem.indexOf(u8, trimmed, prong_marker) != null) return false;
+    if (std.mem.find(u8, trimmed, prong_marker) != null) return false;
 
     for (block_keywords) |keyword| {
         if (std.mem.startsWith(u8, trimmed, keyword)) return false;
@@ -440,7 +440,7 @@ fn tidy_breathing(errors: *Errors, path: []const u8, lines: *const Lines) void {
 }
 
 fn tidy_control_characters(errors: *Errors, file: *const SourceFile) void {
-    const offset = std.mem.indexOfAny(u8, file.text, "\r\t") orelse return;
+    const offset = std.mem.findAny(u8, file.text, "\r\t") orelse return;
 
     const name = if (file.text[offset] == '\r') "carriage return" else "tab";
 
@@ -449,7 +449,7 @@ fn tidy_control_characters(errors: *Errors, file: *const SourceFile) void {
 
 fn tidy_banned(errors: *Errors, file: *const SourceFile) void {
     for (banned) |ban| {
-        const offset = std.mem.indexOf(u8, file.text, ban.needle) orelse continue;
+        const offset = std.mem.find(u8, file.text, ban.needle) orelse continue;
 
         errors.add_fmt(file.path, line_of(file.text, offset), "'{s}' is banned, use {s}", .{
             ban.needle,
@@ -458,15 +458,15 @@ fn tidy_banned(errors: *Errors, file: *const SourceFile) void {
     }
 
     for (leftover_markers) |marker| {
-        const offset = std.mem.indexOf(u8, file.text, marker) orelse continue;
+        const offset = std.mem.find(u8, file.text, marker) orelse continue;
 
         errors.add_fmt(file.path, line_of(file.text, offset), "leftover '{s}', remove it", .{
             marker,
         });
     }
 
-    if (std.mem.indexOf(u8, file.text, assert_call) == null) return;
-    if (std.mem.indexOf(u8, file.text, assert_alias) != null) return;
+    if (std.mem.find(u8, file.text, assert_call) == null) return;
+    if (std.mem.find(u8, file.text, assert_alias) != null) return;
 
     errors.add_fmt(file.path, 1, "uses assert without declaring '{s}'", .{assert_alias});
 }
@@ -474,12 +474,12 @@ fn tidy_banned(errors: *Errors, file: *const SourceFile) void {
 fn tidy_catch_blocks(errors: *Errors, file: *const SourceFile) void {
     var index: usize = 0;
 
-    while (std.mem.indexOfPos(u8, file.text, index, catch_opener)) |found| {
+    while (std.mem.findPos(u8, file.text, index, catch_opener)) |found| {
         const opened = found + catch_opener.len;
 
         index = opened;
 
-        const closed = std.mem.indexOfScalarPos(u8, file.text, opened, '}') orelse continue;
+        const closed = std.mem.findScalarPos(u8, file.text, opened, '}') orelse continue;
         const body = std.mem.trim(u8, file.text[opened..closed], " \t\r\n");
 
         if (body.len > 0) continue;
@@ -489,7 +489,7 @@ fn tidy_catch_blocks(errors: *Errors, file: *const SourceFile) void {
 }
 
 fn raw_literal_fits(line: []const u8) bool {
-    const marker = std.mem.indexOf(u8, line, "\\\\") orelse return false;
+    const marker = std.mem.find(u8, line, "\\\\") orelse return false;
 
     for (line[0..marker]) |byte| {
         if (byte != ' ') return false;
@@ -514,7 +514,7 @@ fn tidy_lines(errors: *Errors, file: *const SourceFile) void {
         }
 
         if (line_columns(line) <= line_columns_max) continue;
-        if (std.mem.indexOf(u8, line, "https://") != null) continue;
+        if (std.mem.find(u8, line, "https://") != null) continue;
         if (raw_literal_fits(line)) continue;
 
         errors.add_fmt(file.path, index + 1, "line exceeds {d} columns", .{line_columns_max});
@@ -526,13 +526,13 @@ fn tidy_type_functions(errors: *Errors, file: *const SourceFile) void {
     var index: usize = 0;
 
     while (lines.next()) |line| : (index += 1) {
-        const found = std.mem.indexOf(u8, line, function_marker) orelse continue;
+        const found = std.mem.find(u8, line, function_marker) orelse continue;
 
         if (found > 0 and line[found - 1] != ' ') continue;
-        if (std.mem.indexOf(u8, line, "extern \"") != null) continue;
+        if (std.mem.find(u8, line, "extern \"") != null) continue;
 
         const rest = line[found + function_marker.len ..];
-        const open = std.mem.indexOfScalar(u8, rest, '(') orelse continue;
+        const open = std.mem.findScalar(u8, rest, '(') orelse continue;
         const name = rest[0..open];
 
         if (name.len == 0) continue;
@@ -590,7 +590,7 @@ fn is_entry_point(basename: []const u8) bool {
 }
 
 fn report_marker(errors: *Errors, file: *const SourceFile, marker: []const u8) void {
-    const offset = std.mem.indexOf(u8, file.text, marker) orelse return;
+    const offset = std.mem.find(u8, file.text, marker) orelse return;
 
     errors.add_fmt(file.path, line_of(file.text, offset), "'{s}' does not belong here", .{marker});
 }
@@ -647,7 +647,7 @@ fn tidy_function_lengths(errors: *Errors, tree: *const Ast, file: *const SourceF
         if (tag != .fn_decl) continue;
         if (count == spans.len) break;
 
-        const node: Ast.Node.Index = @enumFromInt(index);
+        const node: Ast.Node.Index = @fromBackingInt(@intCast(index));
         const body = tree.nodeData(node).node_and_node[1];
 
         spans[count] = .{
@@ -701,7 +701,7 @@ fn tidy_precedence(errors: *Errors, tree: *const Ast, file: *const SourceFile) v
 
         if (!bitwise and !arithmetic) continue;
 
-        const node: Ast.Node.Index = @enumFromInt(index);
+        const node: Ast.Node.Index = @fromBackingInt(@intCast(index));
         const left, const right = tree.nodeData(node).node_and_node;
 
         for ([_]Ast.Node.Index{ left, right }) |child| {
@@ -761,7 +761,7 @@ fn record_mention(
 
     const between = tree.source[entry.value_ptr.offset..offset];
 
-    if (std.mem.indexOfScalar(u8, between, '\n') == null) return;
+    if (std.mem.findScalar(u8, between, '\n') == null) return;
 
     entry.value_ptr.count += 1;
     entry.value_ptr.offset = offset;
@@ -801,9 +801,9 @@ fn tidy_dead_declarations(
 }
 
 fn tidy_ast(arena: Allocator, errors: *Errors, file: *const SourceFile) !void {
-    const source = try arena.dupeZ(u8, file.text);
+    const source = try arena.dupeSentinel(u8, file.text, 0);
 
-    var tree = try Ast.parse(arena, source, .zig);
+    var tree = try Ast.parse(arena, source, .{ .mode = .zig, .recover = true });
     defer tree.deinit(arena);
 
     if (tree.errors.len > 0) {
@@ -839,7 +839,7 @@ fn tidy_text(arena: Allocator, errors: *Errors, file: *const SourceFile) !void {
 fn declares_tests(text: []const u8) bool {
     if (std.mem.startsWith(u8, text, "test ")) return true;
 
-    return std.mem.indexOf(u8, text, "\ntest ") != null;
+    return std.mem.find(u8, text, "\ntest ") != null;
 }
 
 fn find_source(sources: []const SourceFile, path: []const u8) ?*const SourceFile {
@@ -866,18 +866,18 @@ fn imports_basename(text: []const u8, basename: []const u8) bool {
     var index: usize = 0;
     var guard: usize = 0;
 
-    while (std.mem.indexOfPos(u8, text, index, import_marker)) |found| {
+    while (std.mem.findPos(u8, text, index, import_marker)) |found| {
         guard += 1;
 
         assert(guard <= imports_per_file_max);
 
         const start = found + import_marker.len;
-        const end = std.mem.indexOfScalarPos(u8, text, start, '"') orelse return false;
+        const end = std.mem.findScalarPos(u8, text, start, '"') orelse return false;
         const path = text[start..end];
 
         index = end;
 
-        const tail = if (std.mem.lastIndexOfScalar(u8, path, '/')) |slash|
+        const tail = if (std.mem.findScalarLast(u8, path, '/')) |slash|
             path[slash + 1 ..]
         else
             path;
@@ -964,7 +964,7 @@ fn collect(
 
             storage[count] = .{
                 .basename = try arena.dupe(u8, entry.basename),
-                .path = try std.fmt.allocPrint(arena, "{s}/{s}", .{ directory, relative }),
+                .path = try arena.print("{s}/{s}", .{ directory, relative }),
                 .text = text,
             };
 
@@ -987,7 +987,7 @@ fn tidy_extra_files(arena: Allocator, io: std.Io, errors: *Errors) !void {
         );
 
         const file: SourceFile = .{
-            .basename = std.fs.path.basename(path),
+            .basename = std.Io.Dir.path.basename(path),
             .path = path,
             .text = text,
         };

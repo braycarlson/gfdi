@@ -249,7 +249,7 @@ pub fn build_frame(destination: []u8, message_type: MessageType, payload: []cons
 
     const packet_size: u16 = @intCast(body_len + 2);
     std.mem.writeInt(u16, destination[0..2], packet_size, .little);
-    std.mem.writeInt(u16, destination[2..4], @intFromEnum(message_type), .little);
+    std.mem.writeInt(u16, destination[2..4], @backingInt(message_type), .little);
     @memcpy(destination[4..body_len], payload);
     const crc = crc16(destination[0..body_len]);
     std.mem.writeInt(u16, destination[body_len..][0..2], crc, .little);
@@ -258,14 +258,14 @@ pub fn build_frame(destination: []u8, message_type: MessageType, payload: []cons
 
 pub fn build_ack(destination: []u8, reference_type: MessageType) u32 {
     var payload: [3]u8 = undefined;
-    std.mem.writeInt(u16, payload[0..2], @intFromEnum(reference_type), .little);
+    std.mem.writeInt(u16, payload[0..2], @backingInt(reference_type), .little);
     payload[2] = status_ack;
     return build_frame(destination, .response, &payload);
 }
 
 pub fn build_time_response(destination: []u8, garmin_timestamp: i32, utc_offset_seconds: i32) u32 {
     var payload: [23]u8 = undefined;
-    std.mem.writeInt(u16, payload[0..2], @intFromEnum(MessageType.current_time_request), .little);
+    std.mem.writeInt(u16, payload[0..2], @backingInt(MessageType.current_time_request), .little);
     payload[2] = status_ack;
     std.mem.writeInt(u32, payload[3..7], 0, .little);
     std.mem.writeInt(i32, payload[7..11], garmin_timestamp, .little);
@@ -276,7 +276,7 @@ pub fn build_time_response(destination: []u8, garmin_timestamp: i32, utc_offset_
 }
 
 pub fn build_system_event(destination: []u8, event_type: SystemEventType, value: u8) u32 {
-    const payload = [_]u8{ @intFromEnum(event_type), value };
+    const payload = [_]u8{ @backingInt(event_type), value };
 
     return build_frame(destination, .system_event, &payload);
 }
@@ -287,7 +287,7 @@ pub fn build_supported_file_types_request(destination: []u8) u32 {
 
 pub fn build_device_info_response(destination: []u8, protocol_flags: u8) u32 {
     var payload: [64]u8 = undefined;
-    std.mem.writeInt(u16, payload[0..2], @intFromEnum(MessageType.device_information), .little);
+    std.mem.writeInt(u16, payload[0..2], @backingInt(MessageType.device_information), .little);
     payload[2] = status_ack;
     std.mem.writeInt(u16, payload[3..5], host_protocol_version, .little);
     std.mem.writeInt(u16, payload[5..7], host_product_number, .little);
@@ -314,7 +314,7 @@ pub fn build_download_request(destination: []u8, request: DownloadRequest) u32 {
     var payload: [13]u8 = undefined;
     std.mem.writeInt(u16, payload[0..2], request.file_index, .little);
     std.mem.writeInt(u32, payload[2..6], request.data_offset, .little);
-    payload[6] = @intFromEnum(request.request_type);
+    payload[6] = @backingInt(request.request_type);
     std.mem.writeInt(u16, payload[7..9], request.crc_seed, .little);
     std.mem.writeInt(u32, payload[9..13], request.data_size, .little);
     return build_frame(destination, .download_request, &payload);
@@ -322,7 +322,7 @@ pub fn build_download_request(destination: []u8, request: DownloadRequest) u32 {
 
 pub fn build_file_transfer_data_status(destination: []u8, next_offset: u32) u32 {
     var payload: [8]u8 = undefined;
-    std.mem.writeInt(u16, payload[0..2], @intFromEnum(MessageType.file_transfer_data), .little);
+    std.mem.writeInt(u16, payload[0..2], @backingInt(MessageType.file_transfer_data), .little);
     payload[2] = status_ack;
     payload[3] = transfer_status_ok;
     std.mem.writeInt(u32, payload[4..8], next_offset, .little);
@@ -346,7 +346,7 @@ pub fn parse(message: []const u8) ?Message {
     const crc_computed = crc16(message[0..body_len]);
 
     return .{
-        .type = @enumFromInt(raw_type),
+        .type = @fromBackingInt(raw_type),
         .sequence = sequence,
         .payload = message[4..body_len],
         .packet_size = packet_size,
@@ -380,7 +380,7 @@ pub fn build_protobuf_request(destination: []u8, request_id: u16, proto_bytes: [
     const proto_len: u32 = @intCast(proto_bytes.len);
     const packet_size: u16 = @intCast(body_len + 2);
     std.mem.writeInt(u16, destination[0..2], packet_size, .little);
-    std.mem.writeInt(u16, destination[2..4], @intFromEnum(MessageType.protobuf_request), .little);
+    std.mem.writeInt(u16, destination[2..4], @backingInt(MessageType.protobuf_request), .little);
     std.mem.writeInt(u16, destination[4..6], request_id, .little);
     std.mem.writeInt(u32, destination[6..10], 0, .little);
     std.mem.writeInt(u32, destination[10..14], proto_len, .little);
@@ -398,7 +398,7 @@ pub fn build_protobuf_ack(
     data_offset: u32,
 ) u32 {
     var payload: [11]u8 = undefined;
-    std.mem.writeInt(u16, payload[0..2], @intFromEnum(reference_type), .little);
+    std.mem.writeInt(u16, payload[0..2], @backingInt(reference_type), .little);
     payload[2] = status_ack;
     std.mem.writeInt(u16, payload[3..5], request_id, .little);
     std.mem.writeInt(u32, payload[5..9], data_offset, .little);
@@ -411,12 +411,13 @@ pub fn build_protobuf_ack(
 
 pub fn status_reference_type(payload: []const u8) ?MessageType {
     if (payload.len < 2) return null;
-    return @enumFromInt(std.mem.readInt(u16, payload[0..2], .little));
+    return @fromBackingInt(std.mem.readInt(u16, payload[0..2], .little));
 }
 
 pub fn parse_download_status(payload: []const u8) ?DownloadStatus {
     if (payload.len < 8) return null;
-    const reference_type: MessageType = @enumFromInt(std.mem.readInt(u16, payload[0..2], .little));
+    const raw_type = std.mem.readInt(u16, payload[0..2], .little);
+    const reference_type: MessageType = @fromBackingInt(raw_type);
     const status = payload[2];
     const download_status = payload[3];
     const file_size_max = std.mem.readInt(u32, payload[4..8], .little);
@@ -654,7 +655,7 @@ test "device_info_protocol_flags follows the 1xx rule" {
 test "parse decodes the sequence-flagged short form" {
     var buffer: [32]u8 = undefined;
     const payload = [_]u8{ 0xAA, 0xBB };
-    const length = build_frame(&buffer, @enumFromInt(0x822B), &payload);
+    const length = build_frame(&buffer, @fromBackingInt(0x822B), &payload);
     const message = parse(buffer[0..length]).?;
 
     try std.testing.expect(message.crc_ok);

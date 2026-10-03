@@ -295,12 +295,12 @@ test "put_string_variant writes a signature and a value" {
     var storage: [64]u8 = undefined;
     var writer = Writer.init(&storage);
 
-    try put_string_variant(&writer, "wisp");
+    try put_string_variant(&writer, "umbra");
 
     var reader = wire.Reader.init(writer.bytes());
 
     try testing.expectEqualStrings("s", try reader.take_signature());
-    try testing.expectEqualStrings("wisp", try reader.take_string());
+    try testing.expectEqualStrings("umbra", try reader.take_string());
 }
 
 test "put_bool_variant writes a four byte boolean" {

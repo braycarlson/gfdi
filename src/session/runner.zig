@@ -290,7 +290,7 @@ test "run_attempts stops at the first attempt that completes the archive" {
     try TestRunner.run_attempts(&out, CountingAttempts{ .calls = &calls, .succeed_at = 3 });
 
     try testing.expectEqual(@as(u32, 3), calls);
-    try testing.expect(std.mem.indexOf(u8, out.buffered(), "archive fully pulled") != null);
+    try testing.expect(std.mem.find(u8, out.buffered(), "archive fully pulled") != null);
 }
 
 test "run_attempts settles between attempts and gives up after the cap" {
@@ -306,7 +306,7 @@ test "run_attempts settles between attempts and gives up after the cap" {
 
     try testing.expectEqual(attempts_max, calls);
     try testing.expectEqual(settles * reconnect_settle_ms, FakeTime.elapsed_ms);
-    try testing.expect(std.mem.indexOf(u8, out.buffered(), "stopped after") != null);
+    try testing.expect(std.mem.find(u8, out.buffered(), "stopped after") != null);
 }
 
 test "run_pump abandons a handshake that never receives device-info" {
@@ -338,7 +338,7 @@ test "run_pump abandons a handshake that never receives device-info" {
     try testing.expect(!session.finished);
     try testing.expect(FakeTime.elapsed_ms > handshake_timeout_ms);
     try testing.expect(FakeTime.elapsed_ms < session_ms);
-    try testing.expect(std.mem.indexOf(u8, out.buffered(), "wedged at handshake") != null);
+    try testing.expect(std.mem.find(u8, out.buffered(), "wedged at handshake") != null);
 }
 
 test "run_pump reports dropped fragments once the session ends" {
@@ -368,6 +368,6 @@ test "run_pump reports dropped fragments once the session ends" {
 
     try TestRunner.run_pump(&out, session, FakeState{ .dropped = 7 }, NoHooks{});
 
-    try testing.expect(std.mem.indexOf(u8, out.buffered(), "7 fragment(s)") != null);
-    try testing.expect(std.mem.indexOf(u8, out.buffered(), "0 file(s) saved") != null);
+    try testing.expect(std.mem.find(u8, out.buffered(), "7 fragment(s)") != null);
+    try testing.expect(std.mem.find(u8, out.buffered(), "0 file(s) saved") != null);
 }

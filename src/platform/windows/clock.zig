@@ -82,7 +82,7 @@ pub const WinClock = struct {
 
         if (SystemTimeToTzSpecificLocalTime(null, &utc, &local) == 0) return null;
 
-        return std.fmt.bufPrint(buffer, "{d:0>4}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}", .{
+        return std.mem.print(buffer, "{d:0>4}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}", .{
             local.year, local.month, local.day, local.hour, local.minute, local.second,
         }) catch null;
     }

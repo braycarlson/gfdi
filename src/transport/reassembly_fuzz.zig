@@ -120,7 +120,7 @@ fn write_message(random: std.Random, sent: *SentMessages, stream: []u8) u32 {
 
     const frame_len = gfdi.build_frame(
         &sent.frames[slot],
-        @enumFromInt(random.int(u16)),
+        @fromBackingInt(random.int(u16)),
         payload[0..payload_len],
     );
 

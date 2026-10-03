@@ -595,7 +595,7 @@ fn authenticate(fd: sys.Fd) Error!void {
 
     var digits: [16]u8 = undefined;
 
-    const decimal = std.fmt.bufPrint(&digits, "{d}", .{uid}) catch {
+    const decimal = std.mem.print(&digits, "{d}", .{uid}) catch {
         return Error.AuthFailed;
     };
 
@@ -614,7 +614,7 @@ fn authenticate(fd: sys.Fd) Error!void {
         hex[index * 2 + 1] = to_hex(decimal[index] & 0x0F);
     }
 
-    const line = std.fmt.bufPrint(
+    const line = std.mem.print(
         &request,
         "\x00AUTH EXTERNAL {s}\r\n",
         .{hex[0 .. decimal.len * 2]},

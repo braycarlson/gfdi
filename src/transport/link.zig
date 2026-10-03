@@ -242,7 +242,7 @@ fn route_control(state: anytype, bytes: []const u8) void {
 }
 
 fn control_frame(request: u8, service: u16, status: u8, assigned: u8) [14]u8 {
-    var frame = [_]u8{0} ** 14;
+    var frame: [14]u8 = @splat(0);
 
     frame[1] = request;
     frame[2] = multi_link.client_id;
@@ -306,7 +306,8 @@ test "send chunks a COBS encoded message behind the assigned handle" {
     var instance = capture_link(&backend, &state);
 
     var message: [gfdi.message_len_max]u8 = undefined;
-    const message_len = gfdi.build_frame(&message, .response, &([_]u8{0x5A} ** 64));
+    const payload: [64]u8 = @splat(0x5A);
+    const message_len = gfdi.build_frame(&message, .response, &payload);
 
     try instance.send(message[0..message_len]);
 
@@ -354,12 +355,13 @@ test "register_service writes the documented frame layout" {
     try instance.register_service(multi_link.service_gfdi);
 
     const written = backend.get(0);
+    const reserved: [7]u8 = @splat(0);
 
     try testing.expectEqual(@as(usize, register_frame_len), written.len);
     try testing.expectEqual(@as(u8, 0), written[0]);
     try testing.expectEqual(multi_link.register_request, written[1]);
     try testing.expectEqual(multi_link.client_id, written[2]);
-    try testing.expectEqualSlices(u8, &[_]u8{0} ** 7, written[3..10]);
+    try testing.expectEqualSlices(u8, &reserved, written[3..10]);
 
     const service = std.mem.readInt(u16, written[10..12], .little);
 

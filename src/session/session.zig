@@ -956,7 +956,7 @@ pub fn SessionType(comptime Env: type) type {
 
             var name_buffer: [96]u8 = undefined;
 
-            const name = std.fmt.bufPrint(
+            const name = std.mem.print(
                 &name_buffer,
                 "{s}_{x}_{x}.fit",
                 .{ file.name[0..file.name_len], file.id1, file.id2 },

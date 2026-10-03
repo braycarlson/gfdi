@@ -3,7 +3,6 @@ const std = @import("std");
 const assert = std.debug.assert;
 
 const Allocator = std.mem.Allocator;
-const Param = std.builtin.Type.Fn.Param;
 const Writer = std.Io.Writer;
 
 const Command = struct {
@@ -45,18 +44,18 @@ fn require_command(comptime backend: type, comptime command: Command) void {
         @compileError("gfdi backend command '" ++ command.name ++ "' is not a function");
     }
 
-    require_params(command, info.@"fn".params);
+    require_params(command, info.@"fn".param_types);
     require_return(command, info.@"fn".return_type);
 }
 
-fn require_params(comptime command: Command, comptime params: []const Param) void {
+fn require_params(comptime command: Command, comptime params: []const ?type) void {
     if (params.len != command.params.len) {
         @compileError("gfdi backend command '" ++ command.name ++
             "' takes the wrong argument count");
     }
 
     for (params, command.params) |actual, expected| {
-        const found = actual.type orelse @compileError("gfdi backend command '" ++
+        const found = actual orelse @compileError("gfdi backend command '" ++
             command.name ++ "' has a generic parameter");
 
         if (found != expected) {

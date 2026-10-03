@@ -142,8 +142,7 @@ pub fn GFDIStateType(comptime Lock: type) type {
 
             const remaining = instance.reassembly_len - count;
 
-            std.mem.copyForwards(
-                u8,
+            @memmove(
                 instance.reassembly[0..remaining],
                 instance.reassembly[count..instance.reassembly_len],
             );

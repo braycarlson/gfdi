@@ -38,7 +38,7 @@ const out_buffer_len: u32 = 64 * 1024;
 const session_buffer_len: u32 = 4096;
 const transfer_data_len: u32 = 256;
 
-const event_kind_count = @typeInfo(EventKind).@"enum".fields.len;
+const event_kind_count = @typeInfo(EventKind).@"enum".field_names.len;
 
 pub fn main(gpa: std.mem.Allocator, args: fuzz.FuzzArgs) !void {
     try fuzz_session(gpa, args.seed, args.events_max);
@@ -121,7 +121,7 @@ fn apply_event(
         .protobuf_page => event_protobuf_page(random, &message),
         .notification => event_notification(random, &message),
         .time_request => gfdi.build_frame(&message, .current_time_request, &.{}),
-        .unknown_type => gfdi.build_frame(&message, @enumFromInt(random.int(u16)), &.{}),
+        .unknown_type => gfdi.build_frame(&message, @fromBackingInt(random.int(u16)), &.{}),
         .corrupt_crc => event_corrupt_crc(random, &message),
         .runt => event_random_bytes(random, &message, 0, 5),
         .random_bytes => event_random_bytes(random, &message, 6, 64),
@@ -145,7 +145,7 @@ fn pick_event(random: std.Random, weights: *const [event_kind_count]u32) EventKi
     var roll = random.uintLessThan(u32, total);
 
     for (weights, 0..) |weight, index| {
-        if (roll < weight) return @enumFromInt(index);
+        if (roll < weight) return @fromBackingInt(@intCast(index));
         roll -= weight;
     }
 
@@ -166,7 +166,7 @@ fn event_download_status(random: std.Random, message: []u8) u32 {
     std.mem.writeInt(
         u16,
         payload[0..2],
-        @intFromEnum(gfdi.MessageType.download_request),
+        @backingInt(gfdi.MessageType.download_request),
         .little,
     );
 

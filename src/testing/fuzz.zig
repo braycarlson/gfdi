@@ -70,21 +70,21 @@ pub fn random_int_exponential(random: std.Random, comptime T: type, mean: T) T {
 }
 
 pub fn EnumWeightsType(comptime Enum: type) type {
-    const fields = @typeInfo(Enum).@"enum".fields;
-
-    comptime assert(fields.len > 0);
-    comptime assert(fields.len <= field_count_max);
-
-    return [fields.len]u32;
-}
-
-pub fn random_enum_weights(random: std.Random, comptime Enum: type) EnumWeightsType(Enum) {
-    const count = @typeInfo(Enum).@"enum".fields.len;
+    const count = @typeInfo(Enum).@"enum".field_names.len;
 
     comptime assert(count > 0);
     comptime assert(count <= field_count_max);
 
-    var weights: EnumWeightsType(Enum) = [_]u32{0} ** count;
+    return [count]u32;
+}
+
+pub fn random_enum_weights(random: std.Random, comptime Enum: type) EnumWeightsType(Enum) {
+    const count = @typeInfo(Enum).@"enum".field_names.len;
+
+    comptime assert(count > 0);
+    comptime assert(count <= field_count_max);
+
+    var weights: EnumWeightsType(Enum) = @splat(0);
     var total: u32 = 0;
     var index: u32 = 0;
 
@@ -119,7 +119,7 @@ pub fn random_enum_weighted(
     comptime Enum: type,
     weights: EnumWeightsType(Enum),
 ) Enum {
-    const values = comptime enum_values(Enum);
+    const values = std.enums.values(Enum);
 
     comptime assert(values.len > 0);
     comptime assert(values.len <= field_count_max);
@@ -143,7 +143,7 @@ pub fn random_enum_weighted(
 }
 
 pub fn random_enum_uniform(random: std.Random, comptime Enum: type) Enum {
-    const values = comptime enum_values(Enum);
+    const values = std.enums.values(Enum);
 
     comptime assert(values.len > 0);
     comptime assert(values.len <= field_count_max);
@@ -175,21 +175,6 @@ pub fn random_bytes(random: std.Random, buffer: []u8) []u8 {
     assert(length <= buffer.len);
 
     return buffer[0..length];
-}
-
-fn enum_values(comptime Enum: type) [@typeInfo(Enum).@"enum".fields.len]Enum {
-    const fields = @typeInfo(Enum).@"enum".fields;
-
-    comptime assert(fields.len > 0);
-    comptime assert(fields.len <= field_count_max);
-
-    var values: [fields.len]Enum = undefined;
-
-    for (fields, 0..) |field, index| {
-        values[index] = @enumFromInt(field.value);
-    }
-
-    return values;
 }
 
 fn weight_total(weights: []const u32) u32 {
@@ -269,7 +254,7 @@ test "random_enum_weights always leaves one variant reachable" {
 
         const value = random_enum_weighted(random, Operation, weights);
 
-        try testing.expect(weights[@intFromEnum(value)] > 0);
+        try testing.expect(weights[@backingInt(value)] > 0);
     }
 
     assert(event == 1000);
@@ -293,11 +278,11 @@ test "random_enum_uniform reaches every variant" {
     var prng = std.Random.DefaultPrng.init(42);
     const random = prng.random();
 
-    var seen = [_]bool{false} ** 3;
+    var seen: [3]bool = @splat(false);
     var event: u32 = 0;
 
     while (event < 1000) : (event += 1) {
-        seen[@intFromEnum(random_enum_uniform(random, Operation))] = true;
+        seen[@backingInt(random_enum_uniform(random, Operation))] = true;
     }
 
     assert(event == 1000);

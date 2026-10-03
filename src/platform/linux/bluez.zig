@@ -595,7 +595,7 @@ pub fn device_path(buffer: []u8, adapter: []const u8, address: u64) []const u8 {
     assert(adapter.len > 0);
     assert(buffer.len >= path_bytes_max);
 
-    return std.fmt.bufPrint(
+    return std.mem.print(
         buffer,
         "{s}/dev_{X:0>2}_{X:0>2}_{X:0>2}_{X:0>2}_{X:0>2}_{X:0>2}",
         .{
@@ -613,7 +613,7 @@ pub fn device_path(buffer: []u8, adapter: []const u8, address: u64) []const u8 {
 pub fn format_address(buffer: []u8, address: u64) []const u8 {
     assert(buffer.len >= address_bytes_max);
 
-    return std.fmt.bufPrint(
+    return std.mem.print(
         buffer,
         "{X:0>2}:{X:0>2}:{X:0>2}:{X:0>2}:{X:0>2}:{X:0>2}",
         .{
@@ -759,11 +759,13 @@ test "format_address renders the colon separated MAC" {
 
 test "a text field truncates rather than overflowing" {
     var name: Name = .{};
+    const long: [name_bytes_max + 8]u8 = @splat('x');
+    const full: [name_bytes_max]u8 = @splat('x');
 
-    name.set("x" ** (name_bytes_max + 8));
+    name.set(&long);
 
     try testing.expectEqual(@as(u32, name_bytes_max), name.length);
-    try testing.expect(name.eql("x" ** name_bytes_max));
+    try testing.expect(name.eql(&full));
 }
 
 fn stage_managed_objects(storage: []u8) ![]const u8 {
