@@ -1,0 +1,60 @@
+name: ci
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+    workflow_call:
+
+permissions:
+    contents: read
+
+jobs:
+    ci:
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+        runs-on: ${{ matrix.os }}
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  path: ${{ github.event.repository.name }}
+
+            - name: Clone dependencies
+              run: |
+                  siblings_of() {
+                      sed -n 's|^ *\.path = "\.\./\([A-Za-z0-9_-]*\)",$|\1|p' "$1/build.zig.zon"
+                  }
+
+                  project="${GITHUB_REPOSITORY#*/}"
+                  pending=$(siblings_of "$project")
+
+                  for _ in $(seq 1 32); do
+                      next=""
+
+                      for sibling in $pending; do
+                          if [ ! -d "$sibling" ]; then
+                              git clone --depth 1 "https://github.com/$GITHUB_REPOSITORY_OWNER/$sibling.git" "$sibling"
+                              next="$next $(siblings_of "$sibling")"
+                          fi
+                      done
+
+                      pending=$next
+                  done
+
+            - uses: mlugg/setup-zig@v2
+              with:
+                  version: 0.17.1
+
+            - name: CI
+              working-directory: ${{ github.event.repository.name }}
+              run: zig build ci --summary all
+
+            - name: Test ReleaseSafe
+              working-directory: ${{ github.event.repository.name }}
+              run: zig build test:unit -Doptimize=safe --summary all

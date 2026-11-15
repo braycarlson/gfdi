@@ -1,0 +1,5 @@
+select = ["ALL"]
+ignore = ["TS046"]
+
+[extend-per-file-ignores]
+"src/platform.zig" = ["TS035"]
